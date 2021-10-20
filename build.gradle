@@ -1,5 +1,10 @@
+buildscript {
+    apply from: 'versions.gradle'
+}
+
 plugins {
     id 'java'
+    id "io.freefair.lombok" version "6.2.0"
 }
 
 group 'ru.tsitmande'
@@ -10,6 +15,11 @@ repositories {
 }
 
 dependencies {
+
+    implementation 'org.slf4j:slf4j-simple:+'
+
+    implementation 'org.slf4j:slf4j-api:+'
+    implementation "uk.co.szmg.grafana:grafana-dashboard-generator:$grafanaDashboardGeneratorVersion"
     testImplementation 'org.junit.jupiter:junit-jupiter-api:5.6.0'
     testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine'
 }
