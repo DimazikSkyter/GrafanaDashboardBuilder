@@ -6,8 +6,6 @@ public interface Metric {
 
     String getName();
 
-    String getMetricType();
-
     String getMetricQuery();
 
     Target toTarget();

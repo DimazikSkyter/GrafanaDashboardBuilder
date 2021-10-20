@@ -1,6 +1,6 @@
 package ru.tsitmande.gdb.templates;
 
-import ru.tsitmande.gdb.infrastructure.Module;
+import ru.tsitmande.gdb.modules.Module;
 import ru.tsitmande.gdb.metrics.Metric;
 import uk.co.szmg.grafana.domain.Dashboard;
 

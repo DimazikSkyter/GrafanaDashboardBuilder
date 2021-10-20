@@ -1,57 +1,61 @@
 package ru.tsitmande.gdb;
 
-import lombok.RequiredArgsConstructor;
-import ru.tsitmande.gdb.infrastructure.Module;
-import ru.tsitmande.gdb.metrics.PrometheusMetric;
+import lombok.val;
+import ru.tsitmande.gdb.graphs.CompositeGraphBuilder;
+import ru.tsitmande.gdb.graphs.GraphProperties;
+import ru.tsitmande.gdb.metrics.Metric;
+import ru.tsitmande.gdb.modules.Module;
 import ru.tsitmande.gdb.templates.GrafanaDashboardProperties;
 import ru.tsitmande.gdb.templates.GrafanaDashboardTemplateFacade;
 import uk.co.szmg.grafana.domain.Dashboard;
-import uk.co.szmg.grafana.domain.Graph;
-import uk.co.szmg.grafana.domain.Row;
 
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 import static uk.co.szmg.grafana.domain.DomainFactories.newDashboard;
 import static uk.co.szmg.grafana.domain.DomainFactories.newRow;
 
-@RequiredArgsConstructor
-public class GrafanaDashboardPrometheusFacade implements GrafanaDashboardTemplateFacade<PrometheusMetric> {
+public class GrafanaDashboardPrometheusFacade<T extends Metric> implements GrafanaDashboardTemplateFacade<T> {
 
     private final GrafanaDashboardProperties grafanaDashboardProperties;
-    private final List<Module<PrometheusMetric>> grafanaModules = new ArrayList<>();
-    private final Map<String, Predicate> predicatesMapping = new HashMap<>();
+    private final Map<String, Module<? extends Metric>> grafanaModules = new HashMap<>();
+    private final List<GraphProperties> dashboardGraphs = new ArrayList<>();
 
-    @Override
-    public GrafanaDashboardTemplateFacade<PrometheusMetric> addGraph(Module<PrometheusMetric> module) {
-        grafanaModules.add(module);
-        return this;
+    public GrafanaDashboardPrometheusFacade(GrafanaDashboardProperties grafanaDashboardProperties) {
+        this.grafanaDashboardProperties = grafanaDashboardProperties;
+        loadCurrentGraphs();
+    }
+
+    private void loadCurrentGraphs() {
+
     }
 
 
     @Override
-    public Dashboard generate() {
-        List<Graph> graphs = grafanaModules.stream()
-                .map(prometheusMetricModule -> prometheusMetricModule.generateGraph(
-                        predicatesMapping.computeIfAbsent(prometheusMetricModule.getName(), s -> o -> true)
-                ))
-                .collect(Collectors.toList());
+    public GrafanaDashboardTemplateFacade<T> addGraph(Module<T> module) {
+        grafanaModules.put(module.getName(), module);
+        return this;
+    }
 
+    @Override
+    public Dashboard generate() {
         Dashboard dashboard = newDashboard()
                 .withTitle(grafanaDashboardProperties.getTitle());
 
-        for (int i = 0; i <= (graphs.size() + 1) / 2; i += 2) {
-            Row row = newRow()
-                    .addPanel(graphs.get(i));
-            if(i + 1 < graphs.size()) {
-                row.addPanel(graphs.get(i + 1));
-            }
-            dashboard.addRow(row);
-        }
+        dashboardGraphs.stream()
+                .map(graphProperties -> new CompositeGraphBuilder(graphProperties, grafanaModules))
+                .collect(Collectors.groupingBy(CompositeGraphBuilder::getCluster, Collectors.toList()))
+                .entrySet().stream()
+                .map(entry -> {
+                    val row = newRow()
+                            .withTitle(entry.getKey());
+                    entry.getValue().forEach(compositeGraphBuilder -> row.addPanel(compositeGraphBuilder.build()));
+                    return row;
+                })
+                .forEach(dashboard::addRow);
 
         return dashboard;
     }

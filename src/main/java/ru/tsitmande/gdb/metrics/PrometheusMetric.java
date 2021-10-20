@@ -12,7 +12,6 @@ import static uk.co.szmg.grafana.domain.DomainFactories.newTarget;
 public class PrometheusMetric implements Metric {
 
     private String name;
-    private String metricType;
     private String metricQuery;
 
     @Override
